@@ -1,5 +1,6 @@
 import PQueue from 'p-queue';
-import { existsSync, mkdirSync, writeFileSync } from 'fs';
+import { existsSync } from 'fs';
+import { mkdir, writeFile } from 'fs/promises';
 import { join } from 'path';
 export const getImageList = async (page = 0) => {
     const url = `https://qingbuyaohaixiu.com/?page=${page + 1}`;
@@ -116,15 +117,15 @@ export const getAllDatas = (catalogs) => new Promise(resolve => {
     });
 });
 /** 下载全部图片 */
-export const downloadAllImages = (datas, dirPath) => new Promise(resolve => {
+export const downloadAllImages = (datas, dirPath) => new Promise(async (resolve) => {
     if (!existsSync(dirPath))
-        mkdirSync(dirPath);
+        await mkdir(dirPath);
     const queue = new PQueue({ concurrency: 20 });
     let finish = 0;
     const download = async (url, path) => {
         try {
             const data = await fetch(url).then(res => res.arrayBuffer());
-            writeFileSync(path, Buffer.from(data));
+            await writeFile(path, Buffer.from(data));
         }
         catch {
             await download(url, path);
@@ -139,16 +140,18 @@ export const downloadAllImages = (datas, dirPath) => new Promise(resolve => {
     });
     queue.on('idle', resolve);
 });
-export const saveDatas = (allDatas, dirPath, pageSize) => {
+export const saveDatas = async (allDatas, dirPath, pageSize) => {
     if (!existsSync(dirPath))
-        mkdirSync(dirPath);
+        await mkdir(dirPath);
     const total = allDatas.length;
-    const allTags = new Map();
+    const allTagsMap = new Map();
     const totalPage = Math.floor((total - 1) / pageSize) + 1;
+    const fileDatas = [];
+    const updateTime = new Date().toLocaleString();
     for (let page = 0; page < totalPage; page++) {
         const start = page * pageSize;
-        const part = allDatas.slice(start, start + pageSize).map(item => {
-            item.tags.forEach(tag => allTags.set(tag, true));
+        const list = allDatas.slice(start, start + pageSize).map(item => {
+            item.tags.forEach(tag => allTagsMap.set(tag, true));
             return {
                 title: item.title,
                 id: item.id,
@@ -158,25 +161,32 @@ export const saveDatas = (allDatas, dirPath, pageSize) => {
                 tags: item.tags,
             };
         });
-        const filename = `data_${page}.json`;
-        const fileData = { totalPage, total, page, pageSize, list: part, allTags: [...allTags.keys()] };
-        writeFileSync(join(dirPath, filename), JSON.stringify(fileData));
+        const fileData = { page, pageSize, list, updateTime, allTags: [], total, totalPage };
+        fileDatas.push(fileData);
     }
+    const allTags = [...allTagsMap.keys()];
+    fileDatas.forEach(async (fileData, page) => {
+        const filename = `data_${page}.json`;
+        fileData.allTags = allTags;
+        await writeFile(join(dirPath, filename), JSON.stringify(fileData));
+    });
+    const initData = { totalPage, total, allTags, updateTime };
+    await writeFile(join(dirPath, 'init.json'), JSON.stringify(initData));
 };
 if (import.meta.filename == process.argv[1]) {
     // 总页码
-    const totalPage = 262;
+    const totalPage = 10; // 262
     // 图片文件保存路径
-    const imageSaveDir = join(import.meta.dirname, '../../docs/images');
+    const imageSaveDir = join(import.meta.dirname, '../../docs/images2');
     // 数据文件保存路径
-    const datasFileDir = join(import.meta.dirname, '../../docs/datas');
+    const datasFileDir = join(import.meta.dirname, '../../docs/datas2');
     // 数据文件每页数据条数
     const pageSize = 36;
     const allCatalogs = await getAllCatalogs(totalPage);
     const allDatas = await getAllDatas(allCatalogs);
     await downloadAllImages(allDatas, imageSaveDir);
     // const allDatas = JSON.parse(readFileSync('datas.json').toString())
-    saveDatas(allDatas, datasFileDir, pageSize);
+    await saveDatas(allDatas, datasFileDir, pageSize);
     console.log(`👉 图片文件保存路径：${imageSaveDir}`);
     console.log(`👉 数据文件保存路径：${datasFileDir}`);
 }

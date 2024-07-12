@@ -7,4 +7,7 @@ export default defineConfig({
     },
     base: './',
     publicDir: 'docs',
+    server: {
+        host: '0.0.0.0'
+    }
 })
