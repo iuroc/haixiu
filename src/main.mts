@@ -1,13 +1,10 @@
 import van from 'vanjs-core'
-import imageSrc from '/images/0b3da20924460b20ea8fe34c927aef06.jpeg'
+import 'bootstrap/dist/css/bootstrap.css'
 
 const { div, img } = van.tags
 
-console.log(imageSrc)
-
 const App = () => {
     return div(
-        img({ src: imageSrc })
     )
 }
 

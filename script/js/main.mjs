@@ -1,7 +1,7 @@
 import PQueue from 'p-queue';
 import { existsSync, mkdirSync, writeFileSync } from 'fs';
 import { join } from 'path';
-const getImageList = async (page = 0) => {
+export const getImageList = async (page = 0) => {
     const url = `https://qingbuyaohaixiu.com/?page=${page + 1}`;
     const html = await fetch(url).then(res => res.text());
     const regex = /<div class="rcm4">.*?\/post\/(\d+).*?src="([^"]+).*?alt="([^"]+)/gs;
@@ -20,7 +20,7 @@ const getImageList = async (page = 0) => {
         throw new Error('未获取到图片列表');
     return data;
 };
-const getImageInfo = async (id) => {
+export const getImageInfo = async (id) => {
     const url = `https://qingbuyaohaixiu.com/post/${id}/`;
     const html = await fetch(url).then(res => res.text());
     const match = html.match(/<h3 >(.*?)<\/h3>.*?<h5>(.*?)<\/h5>.*?<amp-img.*?src="([^"]+)/s);
@@ -40,7 +40,7 @@ const getImageInfo = async (id) => {
     const bigImageFilename = bigImage.match(/[a-z0-9.]+$/)[0];
     return { id, title, date, bigImage, tags, bigImageFilename };
 };
-const parseDate = (text) => {
+export const parseDate = (text) => {
     const months = {
         Jan: 0, Feb: 1, March: 2, April: 3, May: 4, June: 5,
         July: 6, Aug: 7, Sept: 8, Oct: 9, Nov: 10, Dec: 11
@@ -65,7 +65,7 @@ const parseDate = (text) => {
     return new Date(year, month, day, hour, minute);
 };
 /** 获取全部图片目录 */
-const getAllCatalogs = (totalPage) => new Promise(resolve => {
+export const getAllCatalogs = (totalPage) => new Promise(resolve => {
     const queue = new PQueue({ concurrency: 20 });
     let finish = 0;
     const results = [];
@@ -90,7 +90,7 @@ const getAllCatalogs = (totalPage) => new Promise(resolve => {
     });
 });
 /** 获取全部图片完整信息 */
-const getAllDatas = (catalogs) => new Promise(resolve => {
+export const getAllDatas = (catalogs) => new Promise(resolve => {
     const queue = new PQueue({ concurrency: 20 });
     let finish = 0;
     const datas = [];
@@ -116,7 +116,7 @@ const getAllDatas = (catalogs) => new Promise(resolve => {
     });
 });
 /** 下载全部图片 */
-const downloadAllImages = (datas, dirPath) => new Promise(resolve => {
+export const downloadAllImages = (datas, dirPath) => new Promise(resolve => {
     if (!existsSync(dirPath))
         mkdirSync(dirPath);
     const queue = new PQueue({ concurrency: 20 });
@@ -139,14 +139,16 @@ const downloadAllImages = (datas, dirPath) => new Promise(resolve => {
     });
     queue.on('idle', resolve);
 });
-const saveDatas = (allDatas, dirPath, pageSize) => {
+export const saveDatas = (allDatas, dirPath, pageSize) => {
     if (!existsSync(dirPath))
         mkdirSync(dirPath);
     const total = allDatas.length;
+    const allTags = new Map();
     const totalPage = Math.floor((total - 1) / pageSize) + 1;
     for (let page = 0; page < totalPage; page++) {
         const start = page * pageSize;
         const part = allDatas.slice(start, start + pageSize).map(item => {
+            item.tags.forEach(tag => allTags.set(tag, true));
             return {
                 title: item.title,
                 id: item.id,
@@ -157,21 +159,24 @@ const saveDatas = (allDatas, dirPath, pageSize) => {
             };
         });
         const filename = `data_${page}.json`;
-        writeFileSync(join(dirPath, filename), JSON.stringify({ totalPage, total, page, pageSize, list: part }));
+        const fileData = { totalPage, total, page, pageSize, list: part, allTags: [...allTags.keys()] };
+        writeFileSync(join(dirPath, filename), JSON.stringify(fileData));
     }
 };
-// 总页码
-const totalPage = 262;
-// 图片文件保存路径
-const imageSaveDir = '../docs/images';
-// 数据文件保存路径
-const datasFileDir = '../docs/datas';
-// 数据文件每页数据条数
-const pageSize = 36;
-const allCatalogs = await getAllCatalogs(totalPage);
-const allDatas = await getAllDatas(allCatalogs);
-await downloadAllImages(allDatas, imageSaveDir);
-// const allDatas = JSON.parse(readFileSync('datas.json').toString())
-saveDatas(allDatas, datasFileDir, pageSize);
-console.log(`👉 图片文件保存路径：${imageSaveDir}`);
-console.log(`👉 数据文件保存路径：${datasFileDir}`);
+if (import.meta.filename == process.argv[1]) {
+    // 总页码
+    const totalPage = 262;
+    // 图片文件保存路径
+    const imageSaveDir = join(import.meta.dirname, '../../docs/images');
+    // 数据文件保存路径
+    const datasFileDir = join(import.meta.dirname, '../../docs/datas');
+    // 数据文件每页数据条数
+    const pageSize = 36;
+    const allCatalogs = await getAllCatalogs(totalPage);
+    const allDatas = await getAllDatas(allCatalogs);
+    await downloadAllImages(allDatas, imageSaveDir);
+    // const allDatas = JSON.parse(readFileSync('datas.json').toString())
+    saveDatas(allDatas, datasFileDir, pageSize);
+    console.log(`👉 图片文件保存路径：${imageSaveDir}`);
+    console.log(`👉 数据文件保存路径：${datasFileDir}`);
+}
