@@ -180,9 +180,9 @@ const saveDatas = (allDatas: ImageData[], dirPath: string, pageSize: number) => 
 // 总页码
 const totalPage = 262
 // 图片文件保存路径
-const imageSaveDir = '../public/images'
+const imageSaveDir = '../docs/images'
 // 数据文件保存路径
-const datasFileDir = '../public/datas'
+const datasFileDir = '../docs/datas'
 // 数据文件每页数据条数
 const pageSize = 36
 
