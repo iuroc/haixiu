@@ -5,5 +5,6 @@ export default defineConfig({
         emptyOutDir: false,
         outDir: 'docs',
     },
+    base: './',
     publicDir: 'docs',
 })
