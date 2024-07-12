@@ -1,6 +1,7 @@
 {
   "dependencies": {
     "bootstrap": "^5.3.3",
+    "bootstrap-icons": "^1.11.3",
     "p-queue": "^8.0.1",
     "scroll-event-master": "^1.0.6",
     "vanjs-core": "^1.5.0"

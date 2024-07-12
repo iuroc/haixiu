@@ -7,5 +7,3 @@ export const shuffle = <T extends any>(array: T[]): T[] => {
     }
     return array
 }
-
-export const shuffleColors = shuffle(['success', 'primary', 'danger', 'info', 'warning', 'secondary', 'dark'])

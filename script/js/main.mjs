@@ -151,8 +151,7 @@ export const saveDatas = async (allDatas, dirPath, pageSize) => {
     for (let page = 0; page < totalPage; page++) {
         const start = page * pageSize;
         const list = allDatas.slice(start, start + pageSize).map(item => {
-            item.tags.forEach(tag => allTagsMap.set(tag, true));
-            return {
+            const fileItem = {
                 title: item.title,
                 id: item.id,
                 date: item.date,
@@ -160,6 +159,12 @@ export const saveDatas = async (allDatas, dirPath, pageSize) => {
                 bigImageFilename: item.bigImageFilename,
                 tags: item.tags,
             };
+            item.tags.forEach(tag => {
+                if (!allTagsMap.has(tag))
+                    allTagsMap.set(tag, []);
+                allTagsMap.get(tag).push(fileItem);
+            });
+            return fileItem;
         });
         const fileData = { page, pageSize, list, updateTime, allTags: [], total, totalPage };
         fileDatas.push(fileData);
@@ -169,6 +174,17 @@ export const saveDatas = async (allDatas, dirPath, pageSize) => {
         const filename = `data_${page}.json`;
         fileData.allTags = allTags;
         await writeFile(join(dirPath, filename), JSON.stringify(fileData));
+    });
+    allTagsMap.forEach(async (fileDatas, tag) => {
+        const total = fileDatas.length;
+        const totalPage = Math.floor((total - 1) / pageSize) + 1;
+        for (let page = 0; page < totalPage; page++) {
+            const filename = `data_${tag}_${page}.json`;
+            const start = page * pageSize;
+            const list = fileDatas.slice(start, start + pageSize);
+            const fileData = { page, pageSize, list, updateTime, allTags, total, totalPage };
+            await writeFile(join(dirPath, filename), JSON.stringify(fileData));
+        }
     });
     const initData = { totalPage, total, allTags, updateTime };
     await writeFile(join(dirPath, 'init.json'), JSON.stringify(initData));

@@ -3,14 +3,14 @@ import { existsSync } from 'fs'
 import { mkdir, writeFile } from 'fs/promises'
 import { join } from 'path'
 
-export type Catalog = {
+type Catalog = {
     id: number
     image: string
     title: string
     imageFilename: string
 }
 
-export type ImageInfo = {
+type ImageInfo = {
     id: number
     title: string
     date: string
@@ -19,16 +19,20 @@ export type ImageInfo = {
     bigImageFilename: string
 }
 
-export type ImageData = Catalog & ImageInfo
+/** 爬虫获得的图片完整数据，未过滤 `bigImage` 和 `image` */
+type ImageData = Catalog & ImageInfo
 
+/** JSON 文件结构 */
 export type ImageDataFile = {
     page: number
     pageSize: number
     list: ImageDataFileItem[]
 } & InitData
 
-export type ImageDataFileItem = Omit<ImageData, "bigImage" | "image">
+/** JSON 文件中的 `list` 字段 */
+export type ImageDataFileItem = Omit<ImageData, 'bigImage' | 'image'>
 
+/** `init.json` 文件结构 */
 export type InitData = { totalPage: number, total: number, allTags: string[], updateTime: string }
 
 export const getImageList = async (page: number = 0): Promise<Catalog[]> => {
@@ -170,15 +174,14 @@ export const downloadAllImages = (datas: ImageData[], dirPath: string) => new Pr
 export const saveDatas = async (allDatas: ImageData[], dirPath: string, pageSize: number) => {
     if (!existsSync(dirPath)) await mkdir(dirPath)
     const total = allDatas.length
-    const allTagsMap = new Map<string, boolean>()
+    const allTagsMap = new Map<string, ImageDataFileItem[]>()
     const totalPage = Math.floor((total - 1) / pageSize) + 1
     const fileDatas: ImageDataFile[] = []
     const updateTime = new Date().toLocaleString()
     for (let page = 0; page < totalPage; page++) {
         const start = page * pageSize
-        const list = allDatas.slice(start, start + pageSize).map<Omit<ImageData, 'bigImage' | 'image'>>(item => {
-            item.tags.forEach(tag => allTagsMap.set(tag, true))
-            return {
+        const list = allDatas.slice(start, start + pageSize).map<ImageDataFileItem>(item => {
+            const fileItem: ImageDataFileItem = {
                 title: item.title,
                 id: item.id,
                 date: item.date,
@@ -186,6 +189,11 @@ export const saveDatas = async (allDatas: ImageData[], dirPath: string, pageSize
                 bigImageFilename: item.bigImageFilename,
                 tags: item.tags,
             }
+            item.tags.forEach(tag => {
+                if (!allTagsMap.has(tag)) allTagsMap.set(tag, [])
+                allTagsMap.get(tag).push(fileItem)
+            })
+            return fileItem
         })
         const fileData: ImageDataFile = { page, pageSize, list, updateTime, allTags: [], total, totalPage }
         fileDatas.push(fileData)
@@ -195,6 +203,17 @@ export const saveDatas = async (allDatas: ImageData[], dirPath: string, pageSize
         const filename = `data_${page}.json`
         fileData.allTags = allTags
         await writeFile(join(dirPath, filename), JSON.stringify(fileData))
+    })
+    allTagsMap.forEach(async (fileDatas, tag) => {
+        const total = fileDatas.length
+        const totalPage = Math.floor((total - 1) / pageSize) + 1
+        for (let page = 0; page < totalPage; page++) {
+            const filename = `data_${tag}_${page}.json`
+            const start = page * pageSize
+            const list = fileDatas.slice(start, start + pageSize)
+            const fileData: ImageDataFile = { page, pageSize, list, updateTime, allTags, total, totalPage }
+            await writeFile(join(dirPath, filename), JSON.stringify(fileData))
+        }
     })
     const initData: InitData = { totalPage, total, allTags, updateTime }
     await writeFile(join(dirPath, 'init.json'), JSON.stringify(initData))
