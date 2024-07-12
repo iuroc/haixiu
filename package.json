@@ -1,0 +1,18 @@
+{
+  "dependencies": {
+    "bootstrap": "^5.3.3",
+    "p-queue": "^8.0.1",
+    "vanjs-core": "^1.5.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20.14.10",
+    "typescript": "^5.5.3",
+    "vite": "^5.3.3"
+  },
+  "scripts": {
+    "script": "cd script && tsc && node js/main.mjs",
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview"
+  }
+}
