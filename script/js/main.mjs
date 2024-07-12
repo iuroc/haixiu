@@ -161,11 +161,11 @@ const saveDatas = (allDatas, dirPath, pageSize) => {
     }
 };
 // 总页码
-const totalPage = 14;
+const totalPage = 262;
 // 图片文件保存路径
-const imageSaveDir = '../dist/image';
+const imageSaveDir = '../public/images';
 // 数据文件保存路径
-const datasFileDir = '../dist/datas';
+const datasFileDir = '../public/datas';
 // 数据文件每页数据条数
 const pageSize = 36;
 const allCatalogs = await getAllCatalogs(totalPage);
