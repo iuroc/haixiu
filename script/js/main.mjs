@@ -2,6 +2,7 @@ import PQueue from 'p-queue';
 import { existsSync } from 'fs';
 import { mkdir, writeFile } from 'fs/promises';
 import { join } from 'path';
+import sharp from 'sharp';
 export const getImageList = async (page = 0) => {
     const url = `https://qingbuyaohaixiu.com/?page=${page + 1}`;
     const html = await fetch(url).then(res => res.text());
@@ -39,7 +40,7 @@ export const getImageInfo = async (id) => {
         tags.push(match[1].trim());
     }
     const bigImageFilename = bigImage.match(/[a-z0-9.]+$/)[0];
-    return { id, title, date, bigImage, tags, bigImageFilename };
+    return { id, title, date, bigImage, tags, bigImageFilename, width: 0, height: 0 };
 };
 export const parseDate = (text) => {
     const months = {
@@ -125,7 +126,9 @@ export const downloadAllImages = (datas, dirPath) => new Promise(async (resolve)
     const download = async (url, path) => {
         try {
             const data = await fetch(url).then(res => res.arrayBuffer());
+            const metadata = await sharp(data).metadata();
             await writeFile(path, Buffer.from(data));
+            return metadata;
         }
         catch {
             await download(url, path);
@@ -133,7 +136,11 @@ export const downloadAllImages = (datas, dirPath) => new Promise(async (resolve)
     };
     datas.forEach(data => {
         queue.add(() => download(data.image, join(dirPath, data.imageFilename)));
-        queue.add(() => download(data.bigImage, join(dirPath, data.bigImageFilename)));
+        queue.add(async () => {
+            const metadata = await download(data.bigImage, join(dirPath, data.bigImageFilename));
+            data.width = metadata.width;
+            data.height = metadata.height;
+        });
     });
     queue.on('completed', () => {
         console.log(`正在下载图片，已完成 ${(++finish / datas.length / 2 * 100).toFixed(2)}%`);
@@ -158,6 +165,8 @@ export const saveDatas = async (allDatas, dirPath, pageSize) => {
                 imageFilename: item.imageFilename,
                 bigImageFilename: item.bigImageFilename,
                 tags: item.tags,
+                width: item.width,
+                height: item.height
             };
             item.tags.forEach(tag => {
                 if (!allTagsMap.has(tag))

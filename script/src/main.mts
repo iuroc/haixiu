@@ -2,6 +2,7 @@ import PQueue from 'p-queue'
 import { existsSync } from 'fs'
 import { mkdir, writeFile } from 'fs/promises'
 import { join } from 'path'
+import sharp from 'sharp'
 
 type Catalog = {
     id: number
@@ -17,6 +18,8 @@ type ImageInfo = {
     bigImage: string
     tags: string[]
     bigImageFilename: string
+    width: number
+    height: number
 }
 
 /** 爬虫获得的图片完整数据，未过滤 `bigImage` 和 `image` */
@@ -69,7 +72,7 @@ export const getImageInfo = async (id: number): Promise<ImageInfo> => {
         tags.push(match[1].trim())
     }
     const bigImageFilename = bigImage.match(/[a-z0-9.]+$/)![0]
-    return { id, title, date, bigImage, tags, bigImageFilename }
+    return { id, title, date, bigImage, tags, bigImageFilename, width: 0, height: 0 }
 }
 
 export const parseDate = (text: string) => {
@@ -156,14 +159,20 @@ export const downloadAllImages = (datas: ImageData[], dirPath: string) => new Pr
     const download = async (url: string, path: string) => {
         try {
             const data = await fetch(url).then(res => res.arrayBuffer())
+            const metadata = await sharp(data).metadata()
             await writeFile(path, Buffer.from(data))
+            return metadata
         } catch {
             await download(url, path)
         }
     }
     datas.forEach(data => {
         queue.add(() => download(data.image, join(dirPath, data.imageFilename)))
-        queue.add(() => download(data.bigImage, join(dirPath, data.bigImageFilename)))
+        queue.add(async () => {
+            const metadata = await download(data.bigImage, join(dirPath, data.bigImageFilename))
+            data.width = metadata.width
+            data.height = metadata.height
+        })
     })
     queue.on('completed', () => {
         console.log(`正在下载图片，已完成 ${(++finish / datas.length / 2 * 100).toFixed(2)}%`)
@@ -188,6 +197,8 @@ export const saveDatas = async (allDatas: ImageData[], dirPath: string, pageSize
                 imageFilename: item.imageFilename,
                 bigImageFilename: item.bigImageFilename,
                 tags: item.tags,
+                width: item.width,
+                height: item.height
             }
             item.tags.forEach(tag => {
                 if (!allTagsMap.has(tag)) allTagsMap.set(tag, [])
