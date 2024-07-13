@@ -6,7 +6,7 @@ import 'bootstrap/dist/css/bootstrap.css'
 import '../css/main.css'
 import 'bootstrap-icons/font/bootstrap-icons.css'
 import 'photoswipe/photoswipe.css'
-import PhotoSwipe from 'photoswipe'
+import PhotoSwipe, { SlideData } from 'photoswipe'
 
 const { a, div, img } = van.tags
 
@@ -25,6 +25,8 @@ const App = () => {
     )
 }
 
+const dataSource: SlideData[] = []
+
 const initApp = async (tags: HTMLDivElement, images: HTMLDivElement) => {
     // 获取初始化数据
     const initData = await fetch('./datas/init.json').then(res => res.json()) as InitData
@@ -38,6 +40,11 @@ const initApp = async (tags: HTMLDivElement, images: HTMLDivElement) => {
         const tagActive = van.derive(() => activeTag.val == tag)
         return div({
             async onclick() {
+                window.scrollTo({
+                    left: 0,
+                    top: 0,
+                    behavior: 'instant'
+                })
                 if (activeTag.val == tag) return
                 activeTag.val = tag
                 scrollEventMaster.bottomLock = false
@@ -99,17 +106,30 @@ const getDatas = async (page: number): Promise<ImageDataFile> => fetch(`./datas/
 const getDatasByTag = async (page: number, tag: string): Promise<ImageDataFile> => fetch(`./datas/data_${tag}_${page}.json`).then(res => res.json())
 
 /** 图片列表卡片 */
-const ImageCard = (data: ImageDataFileItem) => {
+const ImageCard = (data: ImageDataFileItem, index: number) => {
     return div({
         class: 'card', role: 'button', onclick() {
             const image = new Image()
             image.src = `./images/${data.bigImageFilename}`
             image.addEventListener('load', () => {
-                const pswp = new PhotoSwipe({
-                    wheelToZoom: true,
-                    dataSource: [{ src: `./images/${data.bigImageFilename}`, width: image.naturalWidth, height: image.naturalHeight }]
-                })
-                pswp.init()
+                if (dataSource.length > 100) {
+                    const start = index > 50 ? index - 50 : 0
+                    const nowIndex = index - start
+                    const dataSourcePart = dataSource.slice(start, start + 100)
+                    const pswp = new PhotoSwipe({
+                        wheelToZoom: true,
+                        dataSource: dataSourcePart,
+                        index: nowIndex
+                    })
+                    pswp.init()
+                } else {
+                    const pswp = new PhotoSwipe({
+                        wheelToZoom: true,
+                        dataSource,
+                        index
+                    })
+                    pswp.init()
+                }
             })
         }
     },
@@ -125,11 +145,16 @@ const ImageCard = (data: ImageDataFileItem) => {
 
 /** 根据列表数据创建列表项 */
 const loadImageList = (element: HTMLDivElement, datas: ImageDataFileItem[], append: boolean = true) => {
-    if (!append) element.innerHTML = ''
+    if (!append) element.innerHTML = '', dataSource.splice(0)
     van.add(element, datas.map(data => {
+        dataSource.push({
+            src: `./images/${data.bigImageFilename}`,
+            width: data.width,
+            height: data.height
+        })
         return div({
             class: 'col-xl-3 col-lg-4 col-6',
-        }, ImageCard(data))
+        }, ImageCard(data, dataSource.length - 1))
     }))
 }
 
