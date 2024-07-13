@@ -2,7 +2,6 @@ import PQueue from 'p-queue';
 import { existsSync } from 'fs';
 import { mkdir, writeFile } from 'fs/promises';
 import { join } from 'path';
-import sharp from 'sharp';
 export const getImageList = async (page = 0) => {
     const url = `https://qingbuyaohaixiu.com/?page=${page + 1}`;
     const html = await fetch(url).then(res => res.text());
@@ -25,12 +24,13 @@ export const getImageList = async (page = 0) => {
 export const getImageInfo = async (id) => {
     const url = `https://qingbuyaohaixiu.com/post/${id}/`;
     const html = await fetch(url).then(res => res.text());
-    const match = html.match(/<h3 >(.*?)<\/h3>.*?<h5>(.*?)<\/h5>.*?<amp-img.*?src="([^"]+)/s);
+    const match = html.match(/<h3 >(.*?)<\/h3>.*?<h5>(.*?)<\/h5>.*?<amp-img.*?width="(\d+)".*?height="(\d+)".*?src="([^"]+)/s);
     if (!match)
         throw new Error('正则匹配失败');
     const title = match[1].trim();
     const date = parseDate(match[2]).toLocaleString();
-    const bigImage = match[3];
+    const [width, height] = [parseInt(match[3]), parseInt(match[4])];
+    const bigImage = match[5];
     const tagsRegex = /<a href="\/tag\/.*?> #(.*?)<\/a>/g;
     const tags = [];
     while (true) {
@@ -40,7 +40,7 @@ export const getImageInfo = async (id) => {
         tags.push(match[1].trim());
     }
     const bigImageFilename = bigImage.match(/[a-z0-9.]+$/)[0];
-    return { id, title, date, bigImage, tags, bigImageFilename, width: 0, height: 0 };
+    return { id, title, date, bigImage, tags, bigImageFilename, width, height };
 };
 export const parseDate = (text) => {
     const months = {
@@ -126,9 +126,7 @@ export const downloadAllImages = (datas, dirPath) => new Promise(async (resolve)
     const download = async (url, path) => {
         try {
             const data = await fetch(url).then(res => res.arrayBuffer());
-            const metadata = await sharp(data).metadata();
             await writeFile(path, Buffer.from(data));
-            return metadata;
         }
         catch {
             await download(url, path);
@@ -136,11 +134,7 @@ export const downloadAllImages = (datas, dirPath) => new Promise(async (resolve)
     };
     datas.forEach(data => {
         queue.add(() => download(data.image, join(dirPath, data.imageFilename)));
-        queue.add(async () => {
-            const metadata = await download(data.bigImage, join(dirPath, data.bigImageFilename));
-            data.width = metadata.width;
-            data.height = metadata.height;
-        });
+        queue.add(() => download(data.bigImage, join(dirPath, data.bigImageFilename)));
     });
     queue.on('completed', () => {
         console.log(`正在下载图片，已完成 ${(++finish / datas.length / 2 * 100).toFixed(2)}%`);
