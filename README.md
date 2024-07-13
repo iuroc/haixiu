@@ -1,5 +1,8 @@
 # 不要害羞 @ 图片网
 
+<img src="https://github.com/user-attachments/assets/eff40492-fe92-486f-a979-cafa5852fd88" width="450px">
+<img src="https://github.com/user-attachments/assets/e849919d-9248-4c11-9d0f-5b2c57afc06f" width="450px">
+
 ## 怎么使用
 
 - 方式一：直接访问：https://iuroc.github.io/haixiu/
