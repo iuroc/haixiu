@@ -27,4 +27,4 @@
 
 ## 资源更新
 
-请查阅这篇文档：[资源更新说明](./script/README.md)
+请查阅这篇文档：[图片采集程序 README](./script/README.md)
