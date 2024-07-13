@@ -26,17 +26,17 @@ type ImageInfo = {
 type ImageData = Catalog & ImageInfo
 
 /** JSON 文件结构 */
-export type ImageDataFile = {
+export type DataJSON = {
     page: number
     pageSize: number
-    list: ImageDataFileItem[]
-} & InitData
+    list: DataJSONListItem[]
+} & InitJSON
 
 /** JSON 文件中的 `list` 字段 */
-export type ImageDataFileItem = Omit<ImageData, 'bigImage' | 'image'>
+export type DataJSONListItem = Omit<ImageData, 'bigImage' | 'image'>
 
 /** `init.json` 文件结构 */
-export type InitData = { totalPage: number, total: number, allTags: string[], updateTime: string }
+export type InitJSON = { totalPage: number, total: number, allTags: string[], updateTime: string }
 
 export const getImageList = async (page: number = 0): Promise<Catalog[]> => {
     const url = `https://qingbuyaohaixiu.com/?page=${page + 1}`
@@ -178,14 +178,14 @@ export const downloadAllImages = (datas: ImageData[], dirPath: string) => new Pr
 export const saveDatas = async (allDatas: ImageData[], dirPath: string, pageSize: number) => {
     if (!existsSync(dirPath)) await mkdir(dirPath)
     const total = allDatas.length
-    const allTagsMap = new Map<string, ImageDataFileItem[]>()
+    const allTagsMap = new Map<string, DataJSONListItem[]>()
     const totalPage = Math.floor((total - 1) / pageSize) + 1
-    const fileDatas: ImageDataFile[] = []
+    const fileDatas: DataJSON[] = []
     const updateTime = new Date().toLocaleString()
     for (let page = 0; page < totalPage; page++) {
         const start = page * pageSize
-        const list = allDatas.slice(start, start + pageSize).map<ImageDataFileItem>(item => {
-            const fileItem: ImageDataFileItem = {
+        const list = allDatas.slice(start, start + pageSize).map<DataJSONListItem>(item => {
+            const fileItem: DataJSONListItem = {
                 title: item.title,
                 id: item.id,
                 date: item.date,
@@ -201,7 +201,7 @@ export const saveDatas = async (allDatas: ImageData[], dirPath: string, pageSize
             })
             return fileItem
         })
-        const fileData: ImageDataFile = { page, pageSize, list, updateTime, allTags: [], total, totalPage }
+        const fileData: DataJSON = { page, pageSize, list, updateTime, allTags: [], total, totalPage }
         fileDatas.push(fileData)
     }
     const allTags = [...allTagsMap.keys()]
@@ -217,11 +217,11 @@ export const saveDatas = async (allDatas: ImageData[], dirPath: string, pageSize
             const filename = `data_${tag}_${page}.json`
             const start = page * pageSize
             const list = fileDatas.slice(start, start + pageSize)
-            const fileData: ImageDataFile = { page, pageSize, list, updateTime, allTags, total, totalPage }
+            const fileData: DataJSON = { page, pageSize, list, updateTime, allTags, total, totalPage }
             await writeFile(join(dirPath, filename), JSON.stringify(fileData))
         }
     })
-    const initData: InitData = { totalPage, total, allTags, updateTime }
+    const initData: InitJSON = { totalPage, total, allTags, updateTime }
     await writeFile(join(dirPath, 'init.json'), JSON.stringify(initData))
 }
 
