@@ -52,6 +52,7 @@ const initLightbox = (imageList: ImageList) => {
         focusScroll()
         if (lightbox.pswp.currIndex == (lightbox.options.dataSource as SlideData[]).length - 1) {
             if (!imageList.scrollEventMaster) throw new Error('未配置 scrollEventMaster')
+            if (imageList.scrollEventMaster.bottomLock) return
             imageList.scrollEventMaster.bottomLock = true
             try {
                 await imageList.loadPage(imageList.currentPage + 1, true)
