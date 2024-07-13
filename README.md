@@ -1,12 +1,14 @@
 # 不要害羞 @ 图片网
 
-<img src="https://github.com/user-attachments/assets/eff40492-fe92-486f-a979-cafa5852fd88" width="600px">
-<img src="https://github.com/user-attachments/assets/e849919d-9248-4c11-9d0f-5b2c57afc06f" width="600px">
-
 ## 怎么使用
 
-- 方式一：直接访问：https://iuroc.github.io/haixiu/
-- 方式二：Fork 本项目，然后使用 Github Pages 部署 `/docs` 目录 
+### 🍑 方式一
+
+直接访问：[https://iuroc.github.io/haixiu/](https://iuroc.github.io/haixiu/)。
+
+### 🍎 方式二
+
+Fork 本项目，然后使用 Github Pages 部署 `/docs` 目录 。
 
 ## 项目特点
 
@@ -31,3 +33,6 @@
 ## 资源更新
 
 请查阅这篇文档：[图片采集程序 README](./script/README.md)
+
+<img src="https://github.com/user-attachments/assets/eff40492-fe92-486f-a979-cafa5852fd88" width="600px">
+<img src="https://github.com/user-attachments/assets/e849919d-9248-4c11-9d0f-5b2c57afc06f" width="600px">
