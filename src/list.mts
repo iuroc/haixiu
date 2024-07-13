@@ -19,6 +19,7 @@ export default class ImageList {
      * - 注意列表的页码和数据的页码不同，列表页码固定从 0 开始顺序增加
      * - 数据页码可以任意指定，用于加载数据 */
     currentPage = -1
+    currentIndex = -1
     constructor(init: {
         element: HTMLDivElement
         totalPageNoTag: number

@@ -47,6 +47,8 @@ const initLightbox = (imageList: ImageList) => {
     let scrollY = 0
     lightbox.on('change', async () => {
         if (!lightbox.pswp) return
+        // 将 pswp 当前的页码记录回 lightbox 对象，等 pswp 关闭时，pswp 本身的页码会丢失
+        lightbox.options.index = lightbox.pswp.currIndex
         focusScroll()
         if (lightbox.pswp.currIndex == (lightbox.options.dataSource as SlideData[]).length - 1) {
             if (!imageList.scrollEventMaster) throw new Error('未配置 scrollEventMaster')
@@ -87,7 +89,7 @@ const initLightbox = (imageList: ImageList) => {
             }
         } else if (newHash == '#view') {
             if (!lightbox.pswp?.isOpen) {
-                lightbox.loadAndOpen(lightbox.pswp?.currIndex || 0)
+                lightbox.loadAndOpen(lightbox.options.index || 0)
             }
         }
     })
