@@ -4,6 +4,8 @@ import TagBox from './tagBox.mjs'
 import ImageList from './list.mjs'
 import { InitJSON } from '../script/src/main.mjs'
 import ScrollEventMaster from 'scroll-event-master'
+import PhotoSwipe from 'photoswipe'
+import PhotoSwipeLightbox from 'photoswipe/lightbox'
 
 const { div } = van.tags
 
@@ -25,9 +27,11 @@ const initApp = async (init: {
     imageList: HTMLDivElement
 }) => {
     const initData = await getInitData()
+    const lightbox = new PhotoSwipeLightbox({ pswpModule: PhotoSwipe })
     const imageList = new ImageList({
         element: init.imageList,
         totalPageNoTag: initData.totalPage,
+        lightbox
     })
     const scrollEventMaster = initScrollEventMaster(imageList)
     imageList.scrollEventMaster = scrollEventMaster

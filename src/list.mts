@@ -4,6 +4,7 @@ import { DataJSON, DataJSONListItem } from '../script/src/main.mjs'
 import { SlideData } from 'photoswipe'
 import { shuffle } from './utils.mjs'
 import ScrollEventMaster from 'scroll-event-master'
+import PhotoSwipeLightbox from 'photoswipe/lightbox'
 
 const { div, img } = van.tags
 
@@ -12,6 +13,7 @@ export default class ImageList {
     tagBox?: TagBox
     scrollEventMaster?: ScrollEventMaster
     shufflePages: number[]
+    lightbox: PhotoSwipeLightbox
     readonly listData: DataJSONListItem[] = []
     /** 当前页码，必须在内容载入完成后才能更新该值
      * - 注意列表的页码和数据的页码不同，列表页码固定从 0 开始顺序增加
@@ -20,10 +22,12 @@ export default class ImageList {
     constructor(init: {
         element: HTMLDivElement
         totalPageNoTag: number
+        lightbox: PhotoSwipeLightbox
     }) {
         this.element = init.element
         this.element.className = `images row gy-4`
         this.shufflePages = shuffle(Array.from({ length: init.totalPageNoTag }, (_, index) => index))
+        this.lightbox = init.lightbox
     }
 
     /**
@@ -47,8 +51,9 @@ export default class ImageList {
         van.add(this.element, data.list.map(item => {
             const cardIndex = this.listData.length
             this.listData.push(item)
-            return div({ class: `col-xl-3 col-lg-4 col-6` }, ImageCard(item, cardIndex))
+            return div({ class: `col-xl-3 col-lg-4 col-6` }, ImageCard(item, cardIndex, this.lightbox))
         }))
+        this.lightbox.options.dataSource = this.parseDataSource(this.listData)
         this.currentPage++
         this.scrollEventMaster.bottomLock = data.totalPage == page + 1
     }
@@ -70,7 +75,7 @@ export default class ImageList {
     }
 }
 
-const ImageCard = (data: DataJSONListItem, index: number) => {
+const ImageCard = (data: DataJSONListItem, index: number, lightbox: PhotoSwipeLightbox) => {
     return div({
         class: 'card', role: 'button', onclick() {
             // /** 图片查看器中最多同时存在的图片数量 */
@@ -92,6 +97,7 @@ const ImageCard = (data: DataJSONListItem, index: number) => {
             //     }
             // })
             // pswp.init()
+            lightbox.loadAndOpen(index)
         }
     },
         div({ class: 'ratio ratio-1x1' },
