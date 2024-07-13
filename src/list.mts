@@ -78,25 +78,6 @@ export default class ImageList {
 const ImageCard = (data: DataJSONListItem, index: number, lightbox: PhotoSwipeLightbox) => {
     return div({
         class: 'card', role: 'button', onclick() {
-            // /** 图片查看器中最多同时存在的图片数量 */
-            // const limit = 200
-            // const result = makeDataSourcePart(index, limit, ImageList.dataSource)
-            // const pswp = new PhotoSwipe({
-            //     wheelToZoom: true,
-            //     dataSource: result.dataSource,
-            //     index: result.index
-            // })
-            // pswp.on('change', async () => {
-            //     const indexAfterChange = pswp.currIndex
-            //     if (indexAfterChange == pswp.getNumItems() - 1) {
-            //         const datas = await ImageList.loadList(++ImageList.nowPage, true)
-            //         const nowIndex = indexAfterChange - datas.length
-            //         pswp.options.dataSource = (pswp.options.dataSource as SlideData[]).slice(datas.length).concat(ImageList.dataSource.slice(ImageList.dataSource.length - datas.length))
-            //         pswp.goTo(nowIndex)
-            //         pswp.refreshSlideContent(nowIndex)
-            //     }
-            // })
-            // pswp.init()
             lightbox.loadAndOpen(index)
         }
     },

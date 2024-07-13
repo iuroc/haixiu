@@ -44,13 +44,10 @@ const initLightbox = (imageList: ImageList) => {
         pswpModule: PhotoSwipe,
         wheelToZoom: true,
     })
+    let scrollY = 0
     lightbox.on('change', async () => {
         if (!lightbox.pswp) return
-        const fromCardELement = document.querySelector('.images')?.childNodes[lightbox.pswp.currIndex] as HTMLDivElement
-        window.scrollTo(0, Math.min(
-            fromCardELement.getBoundingClientRect().top + window.scrollY - 200,
-            document.body.scrollHeight - window.innerHeight - 200),
-        )
+        focusScroll()
         if (lightbox.pswp.currIndex == (lightbox.options.dataSource as SlideData[]).length - 1) {
             if (!imageList.scrollEventMaster) throw new Error('未配置 scrollEventMaster')
             imageList.scrollEventMaster.bottomLock = true
@@ -61,6 +58,37 @@ const initLightbox = (imageList: ImageList) => {
             }
             lightbox.pswp.options.dataSource = lightbox.options.dataSource
             lightbox.pswp.refreshSlideContent(lightbox.pswp.currIndex + 1)
+        }
+    })
+
+    /** 跟随滚动条 */
+    const focusScroll = () => {
+        const fromCardELement = document.querySelector('.images')?.childNodes[lightbox.pswp?.currIndex || 0] as HTMLDivElement
+        scrollY = Math.min(
+            fromCardELement.getBoundingClientRect().top + window.scrollY - 200,
+            document.body.scrollHeight - window.innerHeight - 200
+        )
+        window.scrollTo(0, scrollY)
+    }
+
+    lightbox.on('openingAnimationStart', () => {
+        location.hash = 'view'
+    })
+    lightbox.on('closingAnimationEnd', () => {
+        location.hash = ''
+    })
+    window.addEventListener('hashchange', event => {
+        const newHash = new URL(event.newURL).hash
+        window.scrollTo(0, scrollY)
+        if (newHash == '') {
+            if (lightbox.pswp?.isOpen) {
+                lightbox.pswp.animations.stopAll()
+                lightbox.pswp.close()
+            }
+        } else if (newHash == '#view') {
+            if (!lightbox.pswp?.isOpen) {
+                lightbox.loadAndOpen(lightbox.pswp?.currIndex || 0)
+            }
         }
     })
     lightbox.init()
