@@ -55,7 +55,7 @@ const initLightbox = (imageList: ImageList) => {
                 return
             }
             lightbox.pswp.options.dataSource = lightbox.options.dataSource
-            lightbox.pswp.refreshSlideContent(lightbox.pswp.currIndex)
+            lightbox.pswp.refreshSlideContent(lightbox.pswp.currIndex + 1)
         }
     })
     lightbox.init()

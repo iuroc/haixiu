@@ -38,6 +38,7 @@ class TagBox {
 
     async onTagClick(tag: string) {
         if (!this.imageList.scrollEventMaster) throw new Error('未配置 scrollEventMaster')
+        if (this.currentTag.val == tag) return
         scrollTo({
             left: 0,
             top: 0,
