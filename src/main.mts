@@ -10,34 +10,69 @@ import PhotoSwipe, { SlideData } from 'photoswipe'
 
 const { a, div, img } = van.tags
 
+
+
+class ImageList {
+    static element = div({ class: 'images row gy-4' })
+    static nowPage = 0
+    /** 打乱后的页码表 */
+    static shufflePages: number[]
+    static scrollEventMaster: ScrollEventMaster
+    /** 当前活动的标签状态 */
+    static activeTag = van.state('全部')
+    /** 通过标签获取图片列表数据 */
+    static getDatasByTag = async (page: number, tag: string): Promise<ImageDataFile> => fetch(`./datas/data_${tag}_${page}.json`).then(res => res.json())
+    static dataSource: SlideData[] = []
+    /** 根据页码初始化列表项 */
+    static async loadList(page: number, append: boolean = false) {
+        if (!append) {
+            this.element.innerHTML = ''
+            this.dataSource.splice(0)
+        }
+        const datas = this.activeTag.val == '全部'
+            ? await this.getDatas(this.shufflePages[page])
+            : await this.getDatasByTag(page, this.activeTag.val)
+        if (!datas.list) throw new Error('获取列表失败')
+        van.add(this.element, datas.list.map(data => {
+            this.dataSource.push({
+                src: `./images/${data.bigImageFilename}`,
+                width: data.width,
+                height: data.height
+            })
+            return div({
+                class: 'col-xl-3 col-lg-4 col-6',
+            }, ImageCard(data, ImageList.dataSource.length - 1))
+        }))
+    }
+
+    /** 获取某一页的图片列表数据 */
+    static getDatas = async (page: number): Promise<ImageDataFile> => fetch(`./datas/data_${page}.json`).then(res => res.json())
+}
+
 const App = () => {
     const tags = div({ class: 'tags hide-scrollbar d-flex gap-2 py-3 py-sm-4 sticky-top overflow-auto' })
-    const images = div({ class: 'images row gy-4', id: 'my-gallery' })
 
-    initApp(tags, images)
+    initApp(tags, ImageList.element)
 
     return div({ class: 'container py-4 py-sm-5' },
         div({ class: 'hstack' },
             div({ class: 'fs-3 fw-bold me-auto title' }, div({ class: 'd-inline text-danger' }, '不要害羞'), div({ class: 'd-inline text-success' }, ' 图片网')),
             a({ href: 'https://github.com/iuroc/haixiu', class: 'link-secondary focus-ring focus-ring-success', target: '_blank' }, 'Github')
         ),
-        tags, images,
+        tags, ImageList.element,
     )
 }
-
-const dataSource: SlideData[] = []
 
 const initApp = async (tags: HTMLDivElement, images: HTMLDivElement) => {
     // 获取初始化数据
     const initData = await fetch('./datas/init.json').then(res => res.json()) as InitData
     // 载入标签列表
     const allTags = ['全部'].concat(initData.allTags)
-    /** 当前活动的标签状态 */
-    const activeTag = van.state('全部')
+
     van.add(tags, allTags.map((tag, index) => {
         const shuffleColors = ['dark'].concat(shuffle(['success', 'primary', 'danger', 'info', 'warning', 'secondary']))
         const color = shuffleColors[index % shuffleColors.length]
-        const tagActive = van.derive(() => activeTag.val == tag)
+        const tagActive = van.derive(() => ImageList.activeTag.val == tag)
         return div({
             async onclick() {
                 window.scrollTo({
@@ -45,17 +80,17 @@ const initApp = async (tags: HTMLDivElement, images: HTMLDivElement) => {
                     top: 0,
                     behavior: 'instant'
                 })
-                if (activeTag.val == tag) return
-                activeTag.val = tag
-                scrollEventMaster.bottomLock = false
-                nowPage = 0
+                if (ImageList.activeTag.val == tag) return
+                ImageList.activeTag.val = tag
+                ImageList.scrollEventMaster.bottomLock = false
+                ImageList.nowPage = 0
                 if (tag == '全部') {
-                    const datas = await getDatas(shufflePages[nowPage])
+                    const datas = await getDatas(ImageList.shufflePages[ImageList.nowPage])
                     loadImageList(images, datas.list, false)
                 } else {
-                    const datas = await getDatasByTag(nowPage, tag)
+                    const datas = await ImageList.getDatasByTag(ImageList.nowPage, tag)
                     loadImageList(images, datas.list, false)
-                    if (datas.totalPage == nowPage + 1) scrollEventMaster.bottomLock = true
+                    if (datas.totalPage == ImageList.nowPage + 1) ImageList.scrollEventMaster.bottomLock = true
                 }
             },
             class: () => `tag btn text-nowrap border border-2 border-${tagActive.val ? color : ''} btn-${tagActive.val ? color : 'light'}`
@@ -64,31 +99,16 @@ const initApp = async (tags: HTMLDivElement, images: HTMLDivElement) => {
     // 创建顺序页码表
     const pages = Array.from({ length: initData.totalPage }, (_, index) => index)
     // 打乱后的页码表
-    const shufflePages = shuffle(pages)
-    // 获取打乱后的第一页数据
-    let nowPage = 0
-    const datas = await getDatas(shufflePages[nowPage])
-    // 加载图片列表
-    loadImageList(images, datas.list, false)
-
+    ImageList.shufflePages = shuffle(pages)
+    ImageList.loadList(ImageList.shufflePages[ImageList.nowPage])
     // 配置触底自动加页事件
-    const scrollEventMaster = new ScrollEventMaster(window)
-    scrollEventMaster.bottomOffset = 100
-    scrollEventMaster.on('bottom', async () => {
-        scrollEventMaster.bottomLock = true
+    ImageList.scrollEventMaster = new ScrollEventMaster(window)
+    ImageList.scrollEventMaster.bottomOffset = 100
+    ImageList.scrollEventMaster.on('bottom', async () => {
+        ImageList.scrollEventMaster.bottomLock = true
         try {
-            if (activeTag.val == '全部') {
-                const datas = await getDatas(shufflePages[++nowPage])
-                if (!datas.list) throw new Error('获取列表失败')
-                loadImageList(images, datas.list, true)
-                if (datas.totalPage == nowPage + 1) return
-            } else {
-                const datas = await getDatasByTag(++nowPage, activeTag.val)
-                if (!datas.list) throw new Error('获取列表失败')
-                loadImageList(images, datas.list, true)
-                if (datas.totalPage == nowPage + 1) return
-            }
-            scrollEventMaster.bottomLock = false
+            await ImageList.loadList(++ImageList.nowPage, true)
+            ImageList.scrollEventMaster.bottomLock = false
         } catch { }
     })
 
@@ -102,8 +122,20 @@ const initApp = async (tags: HTMLDivElement, images: HTMLDivElement) => {
 /** 获取某一页的图片列表数据 */
 const getDatas = async (page: number): Promise<ImageDataFile> => fetch(`./datas/data_${page}.json`).then(res => res.json())
 
-/** 通过标签获取图片列表数据 */
-const getDatasByTag = async (page: number, tag: string): Promise<ImageDataFile> => fetch(`./datas/data_${tag}_${page}.json`).then(res => res.json())
+const makeDataSourcePart = (index: number, limit: number, dataSource: SlideData[]): {
+    dataSource: SlideData[];
+    index: number;
+} => {
+    if (dataSource.length > limit) {
+        const end = index + limit - 1 >= dataSource.length ? dataSource.length - 1 : index + limit - 1
+        const start = end > limit - 1 ? end - limit + 1 : 0
+        const nowIndex = index - start
+        const dataSourcePart = dataSource.slice(start, end + 1)
+        return { dataSource: dataSourcePart, index: nowIndex }
+    } else {
+        return { dataSource, index }
+    }
+}
 
 /** 图片列表卡片 */
 const ImageCard = (data: ImageDataFileItem, index: number) => {
@@ -112,24 +144,24 @@ const ImageCard = (data: ImageDataFileItem, index: number) => {
             const image = new Image()
             image.src = `./images/${data.bigImageFilename}`
             image.addEventListener('load', () => {
-                if (dataSource.length > 100) {
-                    const start = index > 50 ? index - 50 : 0
-                    const nowIndex = index - start
-                    const dataSourcePart = dataSource.slice(start, start + 100)
-                    const pswp = new PhotoSwipe({
-                        wheelToZoom: true,
-                        dataSource: dataSourcePart,
-                        index: nowIndex
-                    })
-                    pswp.init()
-                } else {
-                    const pswp = new PhotoSwipe({
-                        wheelToZoom: true,
-                        dataSource,
-                        index
-                    })
-                    pswp.init()
-                }
+                /** 图片查看器中最多同时存在的图片数量 */
+                const limit = 200
+                const result = makeDataSourcePart(index, limit, ImageList.dataSource)
+                const pswp = new PhotoSwipe({
+                    wheelToZoom: true,
+                    dataSource: result.dataSource,
+                    index: result.index
+                })
+                pswp.on('change', async () => {
+                    const indexAfterChange = pswp.currIndex
+                    if (indexAfterChange == pswp.getNumItems() - 1) {
+                        await ImageList.loadList(++ImageList.nowPage, true)
+                        const result = makeDataSourcePart(indexAfterChange, limit, ImageList.dataSource)
+                        pswp.options.dataSource = result.dataSource
+                        pswp.refreshSlideContent(result.index)
+                    }
+                })
+                pswp.init()
             })
         }
     },
@@ -145,16 +177,16 @@ const ImageCard = (data: ImageDataFileItem, index: number) => {
 
 /** 根据列表数据创建列表项 */
 const loadImageList = (element: HTMLDivElement, datas: ImageDataFileItem[], append: boolean = true) => {
-    if (!append) element.innerHTML = '', dataSource.splice(0)
+    if (!append) element.innerHTML = '', ImageList.dataSource.splice(0)
     van.add(element, datas.map(data => {
-        dataSource.push({
+        ImageList.dataSource.push({
             src: `./images/${data.bigImageFilename}`,
             width: data.width,
             height: data.height
         })
         return div({
             class: 'col-xl-3 col-lg-4 col-6',
-        }, ImageCard(data, dataSource.length - 1))
+        }, ImageCard(data, ImageList.dataSource.length - 1))
     }))
 }
 
