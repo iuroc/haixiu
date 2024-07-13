@@ -46,6 +46,7 @@ const initLightbox = (imageList: ImageList) => {
     })
     lightbox.on('change', async () => {
         if (!lightbox.pswp) return
+        window.scrollTo(0, Math.min(lightbox.pswp.currIndex / lightbox.pswp.getNumItems() * document.body.scrollHeight - 100, document.body.scrollHeight - window.innerHeight - 100))
         if (lightbox.pswp.currIndex == (lightbox.options.dataSource as SlideData[]).length - 1) {
             if (!imageList.scrollEventMaster) throw new Error('未配置 scrollEventMaster')
             imageList.scrollEventMaster.bottomLock = true
