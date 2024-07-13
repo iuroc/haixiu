@@ -43,6 +43,7 @@ class ImageList {
                 class: 'col-xl-3 col-lg-4 col-6',
             }, ImageCard(data, ImageList.dataSource.length - 1))
         }))
+        return datas.list
     }
 
     /** 获取某一页的图片列表数据 */
@@ -123,17 +124,19 @@ const initApp = async (tags: HTMLDivElement, images: HTMLDivElement) => {
 const getDatas = async (page: number): Promise<ImageDataFile> => fetch(`./datas/data_${page}.json`).then(res => res.json())
 
 const makeDataSourcePart = (index: number, limit: number, dataSource: SlideData[]): {
-    dataSource: SlideData[];
-    index: number;
+    dataSource: SlideData[]
+    index: number
+    start: number
+    end: number
 } => {
     if (dataSource.length > limit) {
         const end = index + limit - 1 >= dataSource.length ? dataSource.length - 1 : index + limit - 1
         const start = end > limit - 1 ? end - limit + 1 : 0
         const nowIndex = index - start
         const dataSourcePart = dataSource.slice(start, end + 1)
-        return { dataSource: dataSourcePart, index: nowIndex }
+        return { dataSource: dataSourcePart, index: nowIndex, start, end }
     } else {
-        return { dataSource, index }
+        return { dataSource, index, start: 0, end: dataSource.length - 1 }
     }
 }
 
@@ -155,10 +158,12 @@ const ImageCard = (data: ImageDataFileItem, index: number) => {
                 pswp.on('change', async () => {
                     const indexAfterChange = pswp.currIndex
                     if (indexAfterChange == pswp.getNumItems() - 1) {
-                        await ImageList.loadList(++ImageList.nowPage, true)
-                        const result = makeDataSourcePart(indexAfterChange, limit, ImageList.dataSource)
+                        const datas = await ImageList.loadList(++ImageList.nowPage, true)
+                        const nowIndex = indexAfterChange - datas.length
+                        result.dataSource = result.dataSource.slice(datas.length).concat(ImageList.dataSource.slice(index))
                         pswp.options.dataSource = result.dataSource
-                        pswp.refreshSlideContent(result.index)
+                        pswp.goTo(nowIndex)
+                        pswp.refreshSlideContent(nowIndex)
                     }
                 })
                 pswp.init()
