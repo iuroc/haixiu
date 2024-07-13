@@ -2,7 +2,6 @@ import PQueue from 'p-queue'
 import { existsSync } from 'fs'
 import { mkdir, writeFile } from 'fs/promises'
 import { join } from 'path'
-import sharp from 'sharp'
 
 type Catalog = {
     id: number
