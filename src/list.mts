@@ -13,7 +13,7 @@ export default class ImageList {
     tagBox?: TagBox
     scrollEventMaster?: ScrollEventMaster
     shufflePages: number[]
-    lightbox: PhotoSwipeLightbox
+    lightbox?: PhotoSwipeLightbox
     readonly listData: DataJSONListItem[] = []
     /** 当前页码，必须在内容载入完成后才能更新该值
      * - 注意列表的页码和数据的页码不同，列表页码固定从 0 开始顺序增加
@@ -22,12 +22,10 @@ export default class ImageList {
     constructor(init: {
         element: HTMLDivElement
         totalPageNoTag: number
-        lightbox: PhotoSwipeLightbox
     }) {
         this.element = init.element
         this.element.className = `images row gy-4`
         this.shufflePages = shuffle(Array.from({ length: init.totalPageNoTag }, (_, index) => index))
-        this.lightbox = init.lightbox
     }
 
     /**
@@ -44,11 +42,13 @@ export default class ImageList {
     /** 根据页码加载卡片列表，这里的页码不等于接口的页码 */
     async loadPage(page: number, append: boolean) {
         if (!this.tagBox) throw new Error('未配置 tagBox')
+        if (!this.lightbox) throw new Error('未配置 lightbox')
         if (!this.scrollEventMaster) throw new Error('未配置 this.scrollEventMaster')
         if (!append) this.clean()
         const currentTag = this.tagBox.currentTag.val
         const data = currentTag == '全部' ? await ImageList.getPageData(this.shufflePages[page]) : await ImageList.getPageData(page, currentTag)
         van.add(this.element, data.list.map(item => {
+            if (!this.lightbox) throw new Error('未配置 lightbox')
             const cardIndex = this.listData.length
             this.listData.push(item)
             return div({ class: `col-xl-3 col-lg-4 col-6` }, ImageCard(item, cardIndex, this.lightbox))
